@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Pepsi - Seguridad SF</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #004b93; color: white; font-family: sans-serif; }
+        .card-busqueda { background: white; color: #333; border-radius: 15px; }
+        .status-box { display: none; padding: 20px; border-radius: 10px; text-align: center; margin-top: 20px; }
+        .autorizado { background-color: #d4edda; color: #155724; border: 2px solid #c3e6cb; }
+        .denegado { background-color: #f8d7da; color: #721c24; border: 2px solid #f5c6cb; }
+        .btn-pepsi { background-color: #005cb4; color: white; font-weight: bold; height: 60px; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+<div class="container py-5">
+    <div class="text-center mb-4">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/0/0f/Pepsi_logo_2014.svg" width="80" alt="Pepsi Logo">
+        <h2 class="mt-2">Control de Acceso SF</h2>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card card-busqueda shadow p-4">
+                <label class="form-label fw-bold">Ingrese Placa (Matrícula):</label>
+                <div class="input-group mb-3">
+                    <input type="text" id="placaInput" class="form-control form-control-lg text-uppercase" placeholder="Ej: P-12345">
+                    <button class="btn btn-pepsi px-4" onclick="buscarPlaca()">BUSCAR</button>
+                </div>
+
+                <div id="statusBox" class="status-box">
+                    <h3 id="statusTitle"></h3>
+                    <div id="vehiculoDetalles" class="mb-3"></div>
+                    <button id="btnRegistrar" class="btn btn-success btn-lg w-100" onclick="registrarEntrada()">CONFIRMAR ENTRADA</button>
+                </div>
+                
+                <div id="errorBox" class="text-danger text-center mt-2 fw-bold"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // CONFIGURACIÓN DE SUPABASE
+    const supabaseUrl = 'TU_SUPABASE_URL';
+    const supabaseKey = 'TU_SUPABASE_ANON_KEY';
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    let vehiculoActual = null;
+
+    async function buscarPlaca() {
+        const placa = document.getElementById('placaInput').value.trim().toUpperCase();
+        const statusBox = document.getElementById('statusBox');
+        const errorBox = document.getElementById('errorBox');
+        
+        // Limpiar estados previos
+        statusBox.style.display = 'none';
+        errorBox.innerText = '';
+
+        if (!placa) return;
+
+        const { data, error } = await supabase
+            .from('vehiculos')
+            .select('*')
+            .eq('placa', placa)
+            .single();
+
+        if (error || !data) {
+            errorBox.innerText = "Vehículo no registrado en el sistema.";
+            return;
+        }
+
+        vehiculoActual = data;
+        mostrarResultado(data);
+    }
+
+    function mostrarResultado(vehiculo) {
+        const statusBox = document.getElementById('statusBox');
+        const statusTitle = document.getElementById('statusTitle');
+        const detalles = document.getElementById('vehiculoDetalles');
+        const btnRegistrar = document.getElementById('btnRegistrar');
+
+        statusBox.style.display = 'block';
+        detalles.innerHTML = `
+            <strong>Modelo:</strong> ${vehiculo.modelo} <br>
+            <strong>Color:</strong> ${vehiculo.color} <br>
+            <strong>Empresa:</strong> ${vehiculo.empresa}
+        `;
+
+        if (vehiculo.autorizado) {
+            statusBox.className = "status-box autorizado";
+            statusTitle.innerText = "✅ ACCESO AUTORIZADO";
+            btnRegistrar.style.display = 'block';
+        } else {
+            statusBox.className = "status-box denegado";
+            statusTitle.innerText = "❌ ACCESO DENEGADO";
+            btnRegistrar.style.display = 'none';
+        }
+    }
+
+    async function registrarEntrada() {
+        if (!vehiculoActual) return;
+
+        const { error } = await supabase
+            .from('entradas')
+            .insert([{ placa_vehiculo: vehiculoActual.placa }]);
+
+        if (error) {
+            alert("Error al registrar entrada: " + error.message);
+        } else {
+            alert("¡Entrada registrada con éxito!");
+            // Limpiar para el siguiente
+            document.getElementById('placaInput').value = '';
+            document.getElementById('statusBox').style.display = 'none';
+        }
+    }
+
+    // Registro del Service Worker para PWA
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+    }
+</script>
+
+</body>
+</html>

@@ -46,37 +46,50 @@
 </div>
 
 <script>
-    // CONFIGURACIÓN DE SUPABASE
+    // 1. CONFIGURACIÓN DE SUPABASE (Verificada)
     const supabaseUrl = 'https://bviatmnwhklzhslkinsq.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2aWF0bW53aGtsemhzbGtpbnNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzODgxNjgsImV4cCI6MjA4Nzk2NDE2OH0.Bw7R_ITwvm_crLZGTbnQmdGhWgKrwrfn4ZZPOP9LJi0';
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    
+    // Cambiamos el nombre de la constante para evitar conflictos
+    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
     let vehiculoActual = null;
 
+    // 2. FUNCIÓN DE BÚSQUEDA
     async function buscarPlaca() {
         const placa = document.getElementById('placaInput').value.trim().toUpperCase();
         const statusBox = document.getElementById('statusBox');
         const errorBox = document.getElementById('errorBox');
         
-        // Limpiar estados previos
         statusBox.style.display = 'none';
-        errorBox.innerText = '';
+        errorBox.innerText = 'Buscando...';
 
-        if (!placa) return;
-
-        const { data, error } = await supabase
-            .from('vehiculos')
-            .select('*')
-            .eq('placa', placa)
-            .single();
-
-        if (error || !data) {
-            errorBox.innerText = "Vehículo no registrado en el sistema.";
+        if (!placa) {
+            errorBox.innerText = 'Por favor, escriba una placa.';
             return;
         }
 
-        vehiculoActual = data;
-        mostrarResultado(data);
+        try {
+            const { data, error } = await _supabase
+                .from('vehiculos') 
+                .select('*')
+                .eq('placa', placa)
+                .single();
+
+            if (error || !data) {
+                errorBox.innerText = "Vehículo no registrado en el sistema.";
+                console.log("Detalle del error:", error);
+                return;
+            }
+
+            errorBox.innerText = '';
+            vehiculoActual = data;
+            mostrarResultado(data);
+
+        } catch (err) {
+            errorBox.innerText = "Error de conexión. Revisa internet.";
+            console.error(err);
+        }
     }
 
     function mostrarResultado(vehiculo) {
@@ -106,15 +119,14 @@
     async function registrarEntrada() {
         if (!vehiculoActual) return;
 
-        const { error } = await supabase
+        const { error } = await _supabase
             .from('entradas')
             .insert([{ placa_vehiculo: vehiculoActual.placa }]);
 
         if (error) {
             alert("Error al registrar entrada: " + error.message);
         } else {
-            alert("¡Entrada registrada con éxito!");
-            // Limpiar para el siguiente
+            alert("¡Entrada registrada con éxito para la placa " + vehiculoActual.placa + "!");
             document.getElementById('placaInput').value = '';
             document.getElementById('statusBox').style.display = 'none';
         }
@@ -122,7 +134,7 @@
 
     // Registro del Service Worker para PWA
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
+        navigator.serviceWorker.register('sw.js').catch(err => console.log("SW no registrado", err));
     }
 </script>
 

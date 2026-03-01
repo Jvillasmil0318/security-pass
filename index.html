@@ -65,7 +65,7 @@
         if (!placa) return;
 
         const { data, error } = await supabase
-            .from('Vehiculos')
+            .from('vehiculos')
             .select('*')
             .eq('placa', placa)
             .single();

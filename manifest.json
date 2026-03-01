@@ -1,0 +1,15 @@
+{
+  "name": "Pepsi Access SF",
+  "short_name": "PepsiAccess",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#005cb4",
+  "theme_color": "#005cb4",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/741/741407.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

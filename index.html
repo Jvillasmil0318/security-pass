@@ -47,4 +47,94 @@
 
 <script>
     // 1. CONFIGURACIÓN ÚNICA
-    const
+    const S_URL = 'https://bviatmnwhklzhslkinsq.supabase.co';
+    const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2aWF0bW53aGtsemhzbGtpbnNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzODgxNjgsImV4cCI6MjA4Nzk2NDE2OH0.Bw7R_ITwvm_crLZGTbnQmdGhWgKrwrfn4ZZPOP9LJi0';
+    
+    // Usamos 'db' para evitar cualquier conflicto con la palabra 'supabase'
+    const db = supabase.createClient(S_URL, S_KEY);
+
+    let vehiculoActual = null;
+
+    // 2. FUNCIÓN DE BÚSQUEDA
+    async function buscarPlaca() {
+        const input = document.getElementById('placaInput');
+        const placa = input.value.trim().toUpperCase();
+        const statusBox = document.getElementById('statusBox');
+        const errorBox = document.getElementById('errorBox');
+        
+        statusBox.style.display = 'none';
+        errorBox.innerText = 'Buscando en base de datos...';
+
+        if (!placa) {
+            errorBox.innerText = 'Por favor, escriba una placa.';
+            return;
+        }
+
+        try {
+            const { data, error } = await db
+                .from('vehiculos') 
+                .select('*')
+                .eq('placa', placa)
+                .single();
+
+            if (error || !data) {
+                errorBox.innerText = "Vehículo no registrado en el sistema.";
+                console.log("Error de búsqueda:", error);
+                return;
+            }
+
+            errorBox.innerText = '';
+            vehiculoActual = data;
+            
+            // Mostrar resultados
+            statusBox.style.display = 'block';
+            const detalles = document.getElementById('vehiculoDetalles');
+            const statusTitle = document.getElementById('statusTitle');
+            const btnRegistrar = document.getElementById('btnRegistrar');
+
+            detalles.innerHTML = `
+                <strong>Modelo:</strong> ${data.modelo} <br>
+                <strong>Color:</strong> ${data.color} <br>
+                <strong>Empresa:</strong> ${data.empresa}
+            `;
+
+            if (data.autorizado) {
+                statusBox.className = "status-box autorizado";
+                statusTitle.innerText = "✅ ACCESO AUTORIZADO";
+                btnRegistrar.style.display = 'block';
+            } else {
+                statusBox.className = "status-box denegado";
+                statusTitle.innerText = "❌ ACCESO DENEGADO";
+                btnRegistrar.style.display = 'none';
+            }
+
+        } catch (err) {
+            errorBox.innerText = "Error crítico de conexión.";
+            console.error(err);
+        }
+    }
+
+    async function registrarEntrada() {
+        if (!vehiculoActual) return;
+
+        const { error } = await db
+            .from('entradas')
+            .insert([{ placa_vehiculo: vehiculoActual.placa }]);
+
+        if (error) {
+            alert("Error al registrar: " + error.message);
+        } else {
+            alert("¡Entrada registrada con éxito!");
+            document.getElementById('placaInput').value = '';
+            document.getElementById('statusBox').style.display = 'none';
+        }
+    }
+
+    // Registro básico de SW
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+</script>
+
+</body>
+</html>
